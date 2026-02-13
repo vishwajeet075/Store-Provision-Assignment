@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-api
+  namespace: woocommerce-platform
+  labels:
+    app: backend-api
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend-api
+  template:
+    metadata:
+      labels:
+        app: backend-api
+        tier: backend
+    spec:
+      serviceAccountName: woocommerce-backend-sa
+      containers:
+      - name: backend
+        image: vishwajeet075/store-provision:latest
+        imagePullPolicy: Always
+        command: ["npm", "start"]  # Runs node src/server.js
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        # Node environment
+        - name: NODE_ENV
+          value: "production"
+        
+        # Server config
+        - name: PORT
+          value: "3000"
+        
+        # Redis connection (from redis-service)
+        - name: REDIS_HOST
+          value: "redis-service"
+        - name: REDIS_PORT
+          value: "6379"
+        
+        # Helm/K8s config
+        - name: HELM_NAMESPACE
+          value: "woocommerce-stores"
+        - name: BASE_DOMAIN
+          value: "stores.example.com"
+        - name: INGRESS_CLASS
+          value: "nginx"
+        - name: STORAGE_CLASS
+          value: "hostpath"
+        - name: CERT_ISSUER
+          value: "letsencrypt-prod"
+        
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-api-service
+  namespace: woocommerce-platform
+  labels:
+    app: backend-api
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: backend-api

@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: store-provisioning-worker
+  namespace: woocommerce-platform
+  labels:
+    app: store-worker
+    tier: worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: store-worker
+  template:
+    metadata:
+      labels:
+        app: store-worker
+        tier: worker
+    spec:
+      serviceAccountName: woocommerce-worker-sa
+      containers:
+      - name: worker
+        image: vishwajeet075/store-provision:latest  # SAME IMAGE AS BACKEND
+        imagePullPolicy: Always
+        command: ["npm", "run", "worker"]  # Runs node src/worker.js
+        env:
+        # Node environment
+        - name: NODE_ENV
+          value: "production"
+        
+        # Redis connection
+        - name: REDIS_HOST
+          value: "redis-service"
+        - name: REDIS_PORT
+          value: "6379"
+        
+        # Helm/K8s config
+        - name: HELM_NAMESPACE
+          value: "woocommerce-stores"
+        - name: BASE_DOMAIN
+          value: "stores.example.com"
+        - name: INGRESS_CLASS
+          value: "nginx"
+        - name: STORAGE_CLASS
+          value: "hostpath"
+        - name: CERT_ISSUER
+          value: "letsencrypt-prod"
+        
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        
+        # Workers don't need health checks (no HTTP server)
+      
+      restartPolicy: Always

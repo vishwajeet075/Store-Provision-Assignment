@@ -1,0 +1,417 @@
+.store-card {
+  background: var(--cyber-surface);
+  border: 2px solid var(--cyber-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+  animation: slideInRight 0.5s ease-out;
+  animation-fill-mode: both;
+}
+
+.store-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--cyber-primary), var(--cyber-secondary));
+  transform: scaleX(0);
+  transition: transform 0.3s;
+}
+
+.store-card:hover::before {
+  transform: scaleX(1);
+}
+
+.store-card:hover {
+  border-color: var(--cyber-primary);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-glow);
+}
+
+.card-glow {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(0, 255, 157, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.store-card:hover .card-glow {
+  opacity: 1;
+}
+
+.store-card-header {
+  margin-bottom: 1.5rem;
+}
+
+.store-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.store-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--cyber-text);
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.status-active {
+  background: rgba(0, 255, 157, 0.1);
+  color: var(--cyber-success);
+  border: 1px solid var(--cyber-success);
+}
+
+.status-active .status-dot {
+  background: var(--cyber-success);
+  box-shadow: 0 0 10px var(--cyber-success);
+}
+
+.status-pending {
+  background: rgba(255, 170, 0, 0.1);
+  color: var(--cyber-warning);
+  border: 1px solid var(--cyber-warning);
+}
+
+.status-pending .status-dot {
+  background: var(--cyber-warning);
+}
+
+.status-error {
+  background: rgba(255, 51, 102, 0.1);
+  color: var(--cyber-error);
+  border: 1px solid var(--cyber-error);
+}
+
+.status-error .status-dot {
+  background: var(--cyber-error);
+}
+
+.status-inactive {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--cyber-text-dim);
+  border: 1px solid var(--cyber-border);
+}
+
+.status-inactive .status-dot {
+  background: var(--cyber-text-dim);
+}
+
+.store-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.store-detail {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.detail-icon {
+  color: var(--cyber-primary);
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+.detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  color: var(--cyber-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.detail-value {
+  color: var(--cyber-text);
+  font-size: 0.875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-url {
+  color: var(--cyber-secondary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.store-url:hover {
+  color: var(--cyber-primary);
+  text-decoration: underline;
+}
+
+.store-card-footer {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.visit-store-button {
+  flex: 1;
+  background: var(--cyber-bg);
+  border: 2px solid var(--cyber-primary);
+  border-radius: 8px;
+  padding: 0.875rem 1.25rem;
+  color: var(--cyber-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.visit-store-button:hover {
+  background: var(--cyber-primary);
+  color: var(--cyber-bg);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+.visit-store-button svg {
+  transition: transform 0.3s;
+}
+
+.visit-store-button:hover svg {
+  transform: translateX(4px);
+}
+
+@media (max-width: 640px) {
+  .store-card {
+    padding: 1.25rem;
+  }
+
+  .store-name {
+    font-size: 1.125rem;
+  }
+}
+
+/* Delete button */
+.delete-store-button {
+  background: none;
+  border: none;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-store-button:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.delete-store-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Delete confirmation modal */
+.delete-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.delete-confirm-modal {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.delete-confirm-modal h4 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  color: var(--text-primary, #0f172a);
+}
+
+.delete-confirm-modal p {
+  margin: 0 0 8px 0;
+  color: var(--text-secondary, #64748b);
+  font-size: 14px;
+}
+
+.delete-warning {
+  color: #ef4444 !important;
+  font-weight: 500;
+  margin-bottom: 20px !important;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.cancel-delete-button,
+.confirm-delete-button {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.cancel-delete-button {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.cancel-delete-button:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.confirm-delete-button {
+  background: #ef4444;
+  color: white;
+}
+
+.confirm-delete-button:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.cancel-delete-button:disabled,
+.confirm-delete-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Provisioning state */
+.provisioning-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  gap: 12px;
+}
+
+.provisioning-text {
+  color: var(--text-secondary, #64748b);
+  font-size: 14px;
+  text-align: center;
+  margin: 0;
+}
+
+/* Loading spinner */
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error message styling */
+.error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.error-message .detail-icon {
+  color: #ef4444;
+}
+
+.error-message .detail-value {
+  color: #ef4444;
+  font-size: 13px;
+}
+
+/* Update store card header to flex */
+.store-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.store-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Disabled visit button */
+.visit-store-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

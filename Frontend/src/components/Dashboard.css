@@ -1,0 +1,232 @@
+.dashboard-container {
+  min-height: 100vh;
+  background: var(--cyber-bg);
+}
+
+.dashboard-nav {
+  background: var(--cyber-surface);
+  border-bottom: 2px solid var(--cyber-border);
+  padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+}
+
+.nav-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+}
+
+.brand-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.25rem;
+  font-weight: 900;
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.brand-main {
+  background: linear-gradient(135deg, var(--cyber-primary), var(--cyber-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.1em;
+}
+
+.brand-sub {
+  font-size: 0.7rem;
+  color: var(--cyber-text-dim);
+  letter-spacing: 0.2em;
+  font-weight: 600;
+}
+
+.dashboard-main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 3rem;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.header-content {
+  flex: 1;
+  min-width: 250px;
+}
+
+.header-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 2.5rem;
+  font-weight: 900;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, var(--cyber-text), var(--cyber-text-dim));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.02em;
+}
+
+.header-subtitle {
+  color: var(--cyber-text-dim);
+  font-size: 1.1rem;
+}
+
+.create-store-button {
+  background: linear-gradient(135deg, var(--cyber-primary), var(--cyber-secondary));
+  border: none;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--cyber-bg);
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.create-store-button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow-strong);
+}
+
+.create-store-button:active {
+  transform: translateY(0);
+}
+
+.error-banner {
+  background: rgba(255, 51, 102, 0.1);
+  border: 1px solid var(--cyber-error);
+  border-radius: 8px;
+  padding: 1rem;
+  color: var(--cyber-error);
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6rem 2rem;
+  gap: 1.5rem;
+}
+
+.loading-spinner-large {
+  width: 50px;
+  height: 50px;
+  border: 4px solid var(--cyber-border);
+  border-top-color: var(--cyber-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  color: var(--cyber-text-dim);
+  font-size: 1.1rem;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6rem 2rem;
+  text-align: center;
+}
+
+.empty-icon {
+  color: var(--cyber-border);
+  margin-bottom: 2rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.empty-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: var(--cyber-text);
+}
+
+.empty-description {
+  color: var(--cyber-text-dim);
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+  max-width: 400px;
+}
+
+.empty-cta {
+  background: var(--cyber-surface);
+  border: 2px solid var(--cyber-primary);
+  border-radius: 8px;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--cyber-primary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.empty-cta:hover {
+  background: var(--cyber-primary);
+  color: var(--cyber-bg);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+.stores-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 2rem;
+  animation: fadeIn 0.6s ease-out;
+}
+
+@media (max-width: 768px) {
+  .dashboard-main {
+    padding: 2rem 1rem;
+  }
+
+  .header-title {
+    font-size: 2rem;
+  }
+
+  .stores-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .create-store-button {
+    width: 100%;
+    justify-content: center;
+  }
+}

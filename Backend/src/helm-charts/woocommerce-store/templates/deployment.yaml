@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "woocommerce-store.fullname" . }}
+  labels:
+    {{- include "woocommerce-store.labels" . | nindent 4 }}
+
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: 1
+  {{- end }}
+
+  selector:
+    matchLabels:
+      {{- include "woocommerce-store.selectorLabels" . | nindent 6 }}
+
+  template:
+    metadata:
+      labels:
+        {{- include "woocommerce-store.selectorLabels" . | nindent 8 }}
+
+    spec:
+      securityContext:
+        fsGroup: 33  # www-data group - handles permissions automatically
+
+      initContainers:
+        # Only wait for MySQL - WordPress docker image handles file extraction itself
+        - name: wait-for-mysql
+          image: busybox:latest
+          command:
+            - sh
+            - -c
+            - |
+              echo "⏳ Waiting for MySQL to be ready..."
+              until nc -z mysql-service.woocommerce-stores.svc.cluster.local 3306; do
+                echo "MySQL not ready yet, waiting..."
+                sleep 5
+              done
+              echo "✅ MySQL is ready!"
+
+      containers:
+        - name: wordpress
+          image: "{{ .Values.wordpress.image.repository }}:{{ .Values.wordpress.image.tag }}"
+          imagePullPolicy: {{ .Values.wordpress.image.pullPolicy }}
+
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+
+          env:
+            - name: WORDPRESS_DB_HOST
+              value: {{ .Values.wordpress.env.WORDPRESS_DB_HOST | quote }}
+            - name: WORDPRESS_DB_NAME
+              value: {{ .Values.wordpress.env.WORDPRESS_DB_NAME | quote }}
+            - name: WORDPRESS_DB_USER
+              value: {{ .Values.wordpress.env.WORDPRESS_DB_USER | quote }}
+            - name: WORDPRESS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-root-password
+            - name: WORDPRESS_TABLE_PREFIX
+              value: {{ .Values.wordpress.env.WORDPRESS_TABLE_PREFIX | quote }}
+            - name: WORDPRESS_DEBUG
+              value: {{ .Values.wordpress.env.WORDPRESS_DEBUG | quote }}
+
+          {{- if .Values.healthCheck.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.livenessProbe.httpGet.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.healthCheck.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.healthCheck.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.healthCheck.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.healthCheck.livenessProbe.failureThreshold }}
+
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.readinessProbe.httpGet.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.healthCheck.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.healthCheck.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.healthCheck.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.healthCheck.readinessProbe.failureThreshold }}
+          {{- end }}
+
+          resources:
+            {{- toYaml .Values.wordpress.resources | nindent 12 }}
+
+          volumeMounts:
+            - name: wordpress-data
+              mountPath: /var/www/html
+
+          securityContext:
+            runAsUser: 33    # www-data user
+            runAsGroup: 33   # www-data group
+
+      volumes:
+        - name: wordpress-data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "woocommerce-store.fullname" . }}-pvc
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

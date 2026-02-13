@@ -1,0 +1,12 @@
+apiVersion: v2
+name: woocommerce-store
+description: A Helm chart for deploying WooCommerce store instances
+type: application
+version: 1.0.0
+appVersion: "6.4"
+keywords:
+  - woocommerce
+  - wordpress
+  - ecommerce
+maintainers:
+  - name: WooCommerce SaaS Platform

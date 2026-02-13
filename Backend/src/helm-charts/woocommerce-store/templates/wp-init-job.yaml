@@ -1,0 +1,163 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "woocommerce-store.fullname" . }}-init
+  labels:
+    {{- include "woocommerce-store.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 5
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+
+      securityContext:
+        fsGroup: 33
+
+      initContainers:
+        - name: wait-for-wordpress
+          image: bitnami/kubectl:latest
+          command:
+            - sh
+            - -c
+            - |
+              echo "⏳ Waiting for WordPress deployment to be ready..."
+              kubectl wait --for=condition=available --timeout=300s \
+                deployment/{{ include "woocommerce-store.fullname" . }} \
+                -n {{ .Release.Namespace }} || true
+
+              echo "⏳ Waiting for WordPress pod to be ready..."
+              kubectl wait --for=condition=ready --timeout=300s \
+                pod -l app.kubernetes.io/instance={{ .Release.Name }} \
+                -n {{ .Release.Namespace }} || true
+
+              echo "⏳ Waiting 60s for WordPress initialization..."
+              sleep 60
+
+      containers:
+        - name: wp-cli-setup
+          image: wordpress:cli
+
+          securityContext:
+            runAsUser: 33
+            runAsGroup: 33
+
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+
+              cd /var/www/html
+
+              echo "📂 Checking WordPress files..."
+              ls -la
+
+              # Wait for wp-config.php
+              max_retries=12
+              retry_count=0
+              while [ ! -f wp-config.php ] && [ $retry_count -lt $max_retries ]; do
+                echo "⏳ Waiting for WordPress files... ($((retry_count+1))/$max_retries)"
+                sleep 10
+                retry_count=$((retry_count+1))
+              done
+
+              if [ ! -f wp-config.php ]; then
+                echo "❌ WordPress not initialized."
+                exit 1
+              fi
+
+              echo "✅ WordPress files found!"
+
+              # Get NodePort dynamically
+              NODE_PORT=$(kubectl get svc {{ include "woocommerce-store.fullname" . }}-wordpress -n {{ .Release.Namespace }} -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "")
+              
+              if [ -z "$NODE_PORT" ]; then
+                echo "⚠️ Could not get NodePort, using service name"
+                SITE_URL="http://{{ include "woocommerce-store.fullname" . }}-wordpress.{{ .Release.Namespace }}.svc.cluster.local"
+              else
+                # Try to get node IP from environment or use localhost
+                NODE_IP="${NODE_IP:-localhost}"
+                SITE_URL="http://${NODE_IP}:${NODE_PORT}"
+              fi
+
+              echo "🌐 Site URL will be: $SITE_URL"
+
+              if wp core is-installed 2>/dev/null; then
+                echo "✅ WordPress already installed."
+                
+                # Update URLs to match current access method
+                echo "🔄 Updating WordPress URLs..."
+                wp option update home "$SITE_URL" --allow-root 2>/dev/null || true
+                wp option update siteurl "$SITE_URL" --allow-root 2>/dev/null || true
+                
+              else
+                echo "🚀 Installing WordPress core..."
+                wp core install \
+                  --url="$SITE_URL" \
+                  --title="{{ .Values.storeName }}" \
+                  --admin_user={{ .Values.woocommerce.adminUser }} \
+                  --admin_password={{ .Values.woocommerce.adminPassword }} \
+                  --admin_email={{ .Values.woocommerce.adminEmail }} \
+                  --skip-email \
+                  --allow-root
+                echo "✅ WordPress installed!"
+              fi
+
+              # Install and activate WooCommerce
+              if wp plugin is-installed woocommerce 2>/dev/null; then
+                echo "✅ WooCommerce already installed."
+
+                if ! wp plugin is-active woocommerce 2>/dev/null; then
+                  echo "🔌 Activating WooCommerce..."
+                  wp plugin activate woocommerce --allow-root
+                fi
+              else
+                echo "📦 Installing WooCommerce..."
+                wp plugin install woocommerce --activate --allow-root
+                echo "✅ WooCommerce installed and activated!"
+              fi
+
+              # Disable redirect to HTTPS (since we're using HTTP NodePort)
+              wp option update woocommerce_force_ssl_checkout 'no' --allow-root 2>/dev/null || true
+
+              echo "🎉 Store setup complete!"
+              echo "🌐 Store URL: $SITE_URL"
+              echo "👤 Admin: {{ .Values.woocommerce.adminUser }}"
+              echo "📧 Email: {{ .Values.woocommerce.adminEmail }}"
+
+          env:
+            - name: WORDPRESS_DB_HOST
+              value: {{ .Values.wordpress.env.WORDPRESS_DB_HOST | quote }}
+            - name: WORDPRESS_DB_NAME
+              value: {{ .Values.wordpress.env.WORDPRESS_DB_NAME | quote }}
+            - name: WORDPRESS_DB_USER
+              value: {{ .Values.wordpress.env.WORDPRESS_DB_USER | quote }}
+            - name: WORDPRESS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-root-password
+            - name: WORDPRESS_TABLE_PREFIX
+              value: {{ .Values.wordpress.env.WORDPRESS_TABLE_PREFIX | quote }}
+            - name: NODE_IP
+              value: "localhost"  # Change this to your actual node IP if needed
+
+          volumeMounts:
+            - name: wordpress-data
+              mountPath: /var/www/html
+
+      volumes:
+        - name: wordpress-data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "woocommerce-store.fullname" . }}-pvc
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+
+      serviceAccountName: {{ include "woocommerce-store.fullname" . }}-sa

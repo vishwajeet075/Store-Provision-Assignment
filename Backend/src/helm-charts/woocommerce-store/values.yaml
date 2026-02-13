@@ -1,0 +1,104 @@
+# Default values for woocommerce-store
+
+storeName: "example-store"
+storeId: "1"
+
+# WordPress Configuration
+wordpress:
+  image:
+    repository: wordpress
+    tag: "6.4-apache"  # Use specific version, not latest
+    pullPolicy: IfNotPresent
+  
+  env:
+    WORDPRESS_DB_HOST: "mysql-service.woocommerce-stores.svc.cluster.local:3306"
+    WORDPRESS_DB_NAME: "woocommerce"
+    WORDPRESS_DB_USER: "root"
+    WORDPRESS_DB_PASSWORD: "password"
+    WORDPRESS_TABLE_PREFIX: "store_1_"
+    WORDPRESS_DEBUG: "false"
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "300m"
+
+# Service Configuration
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  className: nginx
+  host: example-store.stores.example.com
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/client-max-body-size: "100m"
+  tls:
+    enabled: true
+    secretName: ""
+
+# Persistent Storage Configuration
+persistence:
+  enabled: true
+  storageClass: ""  # Empty means use default
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  annotations: {}
+
+# WooCommerce Initial Setup
+woocommerce:
+  adminUser: admin
+  adminPassword: changeme
+  adminEmail: admin@example.com
+
+# Autoscaling Configuration
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Health Check Configuration
+healthCheck:
+  enabled: true
+  livenessProbe:
+    httpGet:
+      path: /wp-login.php
+      port: 80
+    initialDelaySeconds: 120
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  readinessProbe:
+    httpGet:
+      path: /wp-login.php
+      port: 80
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# Security Context
+securityContext:
+  runAsUser: 33  # www-data user
+  runAsGroup: 33
+  fsGroup: 33  # This ensures volume files are owned by www-data
+
+# Node Selection
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Service Account - MUST be true for init job
+serviceAccount:
+  create: true
+  name: ""
