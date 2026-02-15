@@ -7,7 +7,7 @@ storeId: "1"
 wordpress:
   image:
     repository: wordpress
-    tag: "6.4-apache"  # Use specific version, not latest
+    tag: "6.4-apache" 
     pullPolicy: IfNotPresent
   
   env:
@@ -89,16 +89,15 @@ healthCheck:
 
 # Security Context
 securityContext:
-  runAsUser: 33  # www-data user
+  runAsUser: 33 
   runAsGroup: 33
-  fsGroup: 33  # This ensures volume files are owned by www-data
+  fsGroup: 33  
 
 # Node Selection
 nodeSelector: {}
 tolerations: []
 affinity: {}
 
-# Service Account - MUST be true for init job
 serviceAccount:
   create: true
   name: ""

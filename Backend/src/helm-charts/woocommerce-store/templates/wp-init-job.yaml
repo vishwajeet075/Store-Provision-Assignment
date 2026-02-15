@@ -25,12 +25,12 @@ spec:
             - sh
             - -c
             - |
-              echo "⏳ Waiting for WordPress deployment to be ready..."
+              echo "Waiting for WordPress deployment..."
               kubectl wait --for=condition=available --timeout=300s \
                 deployment/{{ include "woocommerce-store.fullname" . }} \
                 -n {{ .Release.Namespace }} || true
 
-              echo "⏳ Waiting for WordPress pod to be ready..."
+              echo "Waiting for WordPress pod..."
               kubectl wait --for=condition=ready --timeout=300s \
                 pod -l app.kubernetes.io/instance={{ .Release.Name }} \
                 -n {{ .Release.Namespace }} || true
@@ -51,12 +51,11 @@ spec:
             - -c
             - |
               set -e
-
+              
               cd /var/www/html
-
-              echo "📂 Checking WordPress files..."
-              ls -la
-
+              
+              echo "Checking WordPress files..."
+              
               # Wait for wp-config.php
               max_retries=12
               retry_count=0
@@ -65,38 +64,22 @@ spec:
                 sleep 10
                 retry_count=$((retry_count+1))
               done
-
+              
               if [ ! -f wp-config.php ]; then
-                echo "❌ WordPress not initialized."
+                echo "WordPress not initialized."
                 exit 1
               fi
-
-              echo "✅ WordPress files found!"
-
-              # Get NodePort dynamically
-              NODE_PORT=$(kubectl get svc {{ include "woocommerce-store.fullname" . }}-wordpress -n {{ .Release.Namespace }} -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "")
               
-              if [ -z "$NODE_PORT" ]; then
-                echo "⚠️ Could not get NodePort, using service name"
-                SITE_URL="http://{{ include "woocommerce-store.fullname" . }}-wordpress.{{ .Release.Namespace }}.svc.cluster.local"
+              echo "WordPress files found!"
+              
+              SITE_URL="http://{{ include "woocommerce-store.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local"
+              
+              echo "Installing with placeholder URL: $SITE_URL"
+              
+              if wp core is-installed --allow-root 2>/dev/null; then
+                echo "WordPress already installed."
               else
-                # Try to get node IP from environment or use localhost
-                NODE_IP="${NODE_IP:-localhost}"
-                SITE_URL="http://${NODE_IP}:${NODE_PORT}"
-              fi
-
-              echo "🌐 Site URL will be: $SITE_URL"
-
-              if wp core is-installed 2>/dev/null; then
-                echo "✅ WordPress already installed."
-                
-                # Update URLs to match current access method
-                echo "🔄 Updating WordPress URLs..."
-                wp option update home "$SITE_URL" --allow-root 2>/dev/null || true
-                wp option update siteurl "$SITE_URL" --allow-root 2>/dev/null || true
-                
-              else
-                echo "🚀 Installing WordPress core..."
+                echo "🚀 Installing WordPress..."
                 wp core install \
                   --url="$SITE_URL" \
                   --title="{{ .Values.storeName }}" \
@@ -105,30 +88,31 @@ spec:
                   --admin_email={{ .Values.woocommerce.adminEmail }} \
                   --skip-email \
                   --allow-root
-                echo "✅ WordPress installed!"
+                echo "WordPress installed!"
               fi
-
-              # Install and activate WooCommerce
-              if wp plugin is-installed woocommerce 2>/dev/null; then
-                echo "✅ WooCommerce already installed."
-
-                if ! wp plugin is-active woocommerce 2>/dev/null; then
-                  echo "🔌 Activating WooCommerce..."
-                  wp plugin activate woocommerce --allow-root
-                fi
+              
+              # Install WooCommerce
+              if wp plugin is-installed woocommerce --allow-root 2>/dev/null; then
+                echo "WooCommerce already installed."
+                wp plugin activate woocommerce --allow-root 2>/dev/null || true
               else
-                echo "📦 Installing WooCommerce..."
+                echo "Installing WooCommerce..."
                 wp plugin install woocommerce --activate --allow-root
-                echo "✅ WooCommerce installed and activated!"
+                echo "WooCommerce installed!"
               fi
-
-              # Disable redirect to HTTPS (since we're using HTTP NodePort)
+              
+              # Set permalinks
+              wp rewrite structure '/%postname%/' --allow-root
+              wp rewrite flush --allow-root
+              
+              # Disable SSL
               wp option update woocommerce_force_ssl_checkout 'no' --allow-root 2>/dev/null || true
-
-              echo "🎉 Store setup complete!"
-              echo "🌐 Store URL: $SITE_URL"
-              echo "👤 Admin: {{ .Values.woocommerce.adminUser }}"
-              echo "📧 Email: {{ .Values.woocommerce.adminEmail }}"
+              
+              # Skip WooCommerce wizard
+              wp option update woocommerce_onboarding_profile '{"skipped":true}' --format=json --allow-root 2>/dev/null || true
+              
+              echo "Store setup complete!"
+              echo "URLs will be updated by worker to NodePort"
 
           env:
             - name: WORDPRESS_DB_HOST
@@ -144,8 +128,6 @@ spec:
                   key: mysql-root-password
             - name: WORDPRESS_TABLE_PREFIX
               value: {{ .Values.wordpress.env.WORDPRESS_TABLE_PREFIX | quote }}
-            - name: NODE_IP
-              value: "localhost"  # Change this to your actual node IP if needed
 
           volumeMounts:
             - name: wordpress-data

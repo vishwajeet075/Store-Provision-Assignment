@@ -10,17 +10,16 @@ const storeRoutes = require('./routes/store.routes');
 
 const app = express();
 
-// Middleware
-app.use(helmet()); // Security headers
+app.use(helmet()); 
 app.use(cors({
   origin: process.env.FRONTEND_URL || '*',
   credentials: true
-})); // CORS
-app.use(morgan('dev')); // Logging
-app.use(express.json()); // Parse JSON bodies
-app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+}));
+app.use(morgan('dev')); 
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true })); 
 
-// Health check endpoint
+
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'healthy',
@@ -66,7 +65,7 @@ app.use((req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('❌ Error:', err);
+  console.error('Error:', err);
   res.status(err.status || 500).json({
     message: err.message || 'Internal server error',
     error: process.env.NODE_ENV === 'development' ? err : {}
@@ -78,20 +77,19 @@ const PORT = process.env.PORT || 8000;
 
 const startServer = async () => {
   try {
-    // Sync database (creates tables if they don't exist)
-    console.log('🔄 Synchronizing database...');
-    await syncDatabase(false); // Set to true to drop and recreate tables
-    console.log('✅ Database synchronized');
+    console.log('Synchronizing database...');
+    await syncDatabase(false); 
+    console.log('Database synchronized');
 
     // Start server
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 API: http://localhost:${PORT}`);
-      console.log(`💚 Health: http://localhost:${PORT}/health`);
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`API: http://localhost:${PORT}`);
+      console.log(`Health: http://localhost:${PORT}/health`);
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    console.error('Failed to start server:', error);
     process.exit(1);
   }
 };

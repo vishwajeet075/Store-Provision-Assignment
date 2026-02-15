@@ -7,7 +7,7 @@ metadata:
     app: store-worker
     tier: worker
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: store-worker
@@ -20,21 +20,19 @@ spec:
       serviceAccountName: woocommerce-worker-sa
       containers:
       - name: worker
-        image: vishwajeet075/store-provision:latest  # SAME IMAGE AS BACKEND
+        image: vishwajeet075/store-provision:latest  
         imagePullPolicy: Always
-        command: ["npm", "run", "worker"]  # Runs node src/worker.js
+        command: ["npm", "run", "worker"]  
         env:
-        # Node environment
+
         - name: NODE_ENV
           value: "production"
         
-        # Redis connection
         - name: REDIS_HOST
           value: "redis-service"
         - name: REDIS_PORT
           value: "6379"
         
-        # Helm/K8s config
         - name: HELM_NAMESPACE
           value: "woocommerce-stores"
         - name: BASE_DOMAIN
@@ -45,6 +43,31 @@ spec:
           value: "hostpath"
         - name: CERT_ISSUER
           value: "letsencrypt-prod"
+
+        - name: DB_NAME
+          value: "woocommerce_platform"
+        - name: DB_USER
+          value: "root"
+        - name: DB_HOST
+          value: "mysql-service" 
+        - name: DB_PORT
+          value: "3306"
+        
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-root-password
+
+        - name: SHARED_MYSQL_HOST
+          value: "mysql-service"  
+        - name: SHARED_MYSQL_PORT
+          value: "3306"
+        - name: SHARED_MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-root-password
         
         resources:
           requests:
@@ -54,6 +77,5 @@ spec:
             memory: "1Gi"
             cpu: "1000m"
         
-        # Workers don't need health checks (no HTTP server)
       
       restartPolicy: Always

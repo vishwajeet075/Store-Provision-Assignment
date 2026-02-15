@@ -9,14 +9,12 @@ exports.signup = async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    // Validate input
     if (!username || !email || !password) {
       return res.status(400).json({ 
         message: 'Username, email, and password are required' 
       });
     }
 
-    // Check if user already exists
     const existingUser = await User.findOne({ 
       where: { 
         email 
@@ -29,7 +27,6 @@ exports.signup = async (req, res) => {
       });
     }
 
-    // Check if username already exists
     const existingUsername = await User.findOne({ 
       where: { 
         username 
@@ -85,7 +82,7 @@ exports.signup = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Signup error:', error);
+    console.error('Signup error:', error);
     res.status(500).json({ 
       message: 'Error registering user',
       error: error.message 
@@ -163,7 +160,7 @@ exports.login = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Login error:', error);
+    console.error('Login error:', error);
     res.status(500).json({ 
       message: 'Error logging in',
       error: error.message 
@@ -198,7 +195,7 @@ exports.getCurrentUser = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Get current user error:', error);
+    console.error('Get current user error:', error);
     res.status(500).json({ 
       message: 'Error fetching user',
       error: error.message 
@@ -206,11 +203,8 @@ exports.getCurrentUser = async (req, res) => {
   }
 };
 
-/**
- * Logout (client-side token removal)
- */
+
 exports.logout = async (req, res) => {
-  // JWT is stateless, so logout is handled client-side by removing the token
   res.status(200).json({ 
     message: 'Logout successful' 
   });

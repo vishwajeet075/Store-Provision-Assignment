@@ -7,7 +7,7 @@ metadata:
     app: backend-api
     tier: backend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: backend-api
@@ -22,26 +22,22 @@ spec:
       - name: backend
         image: vishwajeet075/store-provision:latest
         imagePullPolicy: Always
-        command: ["npm", "start"]  # Runs node src/server.js
+        command: ["npm", "start"] 
         ports:
         - containerPort: 3000
           name: http
         env:
-        # Node environment
         - name: NODE_ENV
           value: "production"
         
-        # Server config
         - name: PORT
           value: "3000"
         
-        # Redis connection (from redis-service)
         - name: REDIS_HOST
           value: "redis-service"
         - name: REDIS_PORT
           value: "6379"
         
-        # Helm/K8s config
         - name: HELM_NAMESPACE
           value: "woocommerce-stores"
         - name: BASE_DOMAIN
@@ -52,6 +48,31 @@ spec:
           value: "hostpath"
         - name: CERT_ISSUER
           value: "letsencrypt-prod"
+
+        - name: DB_NAME
+          value: "woocommerce_platform"
+        - name: DB_USER
+          value: "root"
+        - name: DB_HOST
+          value: "mysql-service" 
+        - name: DB_PORT
+          value: "3306"
+        
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-root-password
+
+        - name: SHARED_MYSQL_HOST
+          value: "mysql-service"  
+        - name: SHARED_MYSQL_PORT
+          value: "3306"
+        - name: SHARED_MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-root-password
         
         resources:
           requests:

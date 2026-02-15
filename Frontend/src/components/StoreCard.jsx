@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './StoreCard.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://app.local';
 
 const StoreCard = ({ store, index, onStoreDeleted, onStoreUpdated }) => {
   const [isDeleting, setIsDeleting] = useState(false);

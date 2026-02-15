@@ -1,33 +1,32 @@
 const { Worker } = require('bullmq');
 const { connection } = require('../services/queue.service');
 const helmService = require('../services/helm.service');
-const databaseService = require('../services/database.service');
 const Store = require('../models/store.model');
+const { exec } = require('child_process');
+const { promisify } = require('util');
 require('dotenv').config();
 
-/**
- * Worker to process store provisioning jobs
- */
+const execAsync = promisify(exec);
+
 const storeProvisioningWorker = new Worker(
   'store-provisioning',
   async (job) => {
     const { storeId, storeDbId, storeName, adminEmail, adminPassword } = job.data;
 
-    console.log(`🚀 Processing store provisioning for: ${storeName} (ID: ${storeId})`);
+    console.log(`Processing store provisioning for: ${storeName} (ID: ${storeId})`);
     
     try {
-      // Update job progress
       await job.updateProgress(10);
 
-      // **STEP 1: Generate admin password if not provided**
-      const finalAdminPassword = adminPassword || `${Math.random().toString(36).substring(2, 10).toUpperCase()}${Math.random().toString(36).substring(2, 6)}`;
-      console.log(`🔐 Generated admin password`);
+const finalAdminPassword = (adminPassword && adminPassword.trim()) 
+  ? adminPassword 
+  : `${Math.random().toString(36).substring(2, 10).toUpperCase()}${Math.random().toString(36).substring(2, 6)}`;
+
+console.log(`Admin password: ${adminPassword ? 'Using provided password' : 'Generated random password'}`);
       
       await job.updateProgress(30);
 
-      // **STEP 2: Deploy to Kubernetes via Helm**
-      console.log('☸️ Deploying to Kubernetes...');
-      
+      console.log('Deploying to Kubernetes...');
       await job.updateProgress(50);
 
       const helmResult = await helmService.installRelease({
@@ -37,82 +36,139 @@ const storeProvisioningWorker = new Worker(
         adminPassword: finalAdminPassword
       });
 
-      console.log(`✅ Helm deployment completed: ${helmResult.releaseName}`);
-      console.log(`🌐 Store URL: ${helmResult.url}`);
+      console.log(`Helm deployment completed: ${helmResult.releaseName}`);
 
-      // Update store with URL immediately after Helm install
       await Store.update(
         {
           url: helmResult.url,
           status: 'deploying',
           admin_email: adminEmail,
-          admin_password: finalAdminPassword // Store it (encrypt in production!)
+          admin_password: finalAdminPassword
         },
         { where: { id: storeDbId } }
       );
 
       await job.updateProgress(70);
 
-      // **STEP 3: Wait for pod to be ready**
-      console.log('⏳ Waiting for pod to become ready...');
+      console.log('Waiting for pod to become ready...');
       
       let attempts = 0;
-      const maxAttempts = 30; // 5 minutes max
+      const maxAttempts = 30;
       let isReady = false;
 
       while (attempts < maxAttempts && !isReady) {
         attempts++;
-        
-        console.log(`🔍 Checking readiness (attempt ${attempts}/${maxAttempts})...`);
+        console.log(`Checking readiness (attempt ${attempts}/${maxAttempts})...`);
         isReady = await helmService.isStoreReady(storeId);
         
-        const progress = 70 + Math.floor((attempts / maxAttempts) * 20); // 70% to 90%
+        const progress = 70 + Math.floor((attempts / maxAttempts) * 20);
         await job.updateProgress(progress);
         
         if (isReady) {
-          console.log(`✅ Pod is READY after ${attempts} attempts (${attempts * 10}s)`);
+          console.log(`Pod is READY after ${attempts} attempts`);
           break;
         } else {
-          console.log(`⏳ Pod not ready yet, waiting 10s...`);
-          await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
+          await new Promise(resolve => setTimeout(resolve, 10000));
         }
       }
 
-      // **STEP 4: Update final status in database**
+      await job.updateProgress(90);
+
+      console.log('Updating WordPress URLs with NodePort...');
+
+      let actualUrl = helmResult.url;
+
+      try {
+        const releaseName = helmResult.releaseName;
+        const namespace = helmResult.namespace;
+        
+        console.log(`Looking for service: ${releaseName}`);
+        
+        const { stdout: nodePortOutput } = await execAsync(
+          `kubectl get svc -n ${namespace} ${releaseName} -o jsonpath='{.spec.ports[0].nodePort}'`
+        );
+        
+        const nodePort = nodePortOutput.trim();
+        
+        if (nodePort) {
+          const nodeIP = process.env.NODE_IP || 'localhost';
+          actualUrl = `http://${nodeIP}:${nodePort}`;
+          
+          console.log(`NodePort URL: ${actualUrl}`);
+          
+          const { stdout: podOutput } = await execAsync(
+            `kubectl get pods -n ${namespace} -l app.kubernetes.io/instance=${releaseName} -o jsonpath='{.items[0].metadata.name}'`
+          );
+          
+          const podName = podOutput.trim();
+          
+          if (podName && isReady) {
+            console.log(`Updating WordPress URLs in pod: ${podName}`);
+            
+await execAsync(`
+kubectl exec -n ${namespace} ${podName} -- bash -c '
+cd /var/www/html &&
+php -r "
+require_once \\"wp-load.php\\";
+update_option(\\"home\\", \\"${actualUrl}\\");
+update_option(\\"siteurl\\", \\"${actualUrl}\\");
+echo \\"URL updated\\n\\";
+"
+'
+`);
+
+const { stdout: verifyUrl } = await execAsync(`
+kubectl exec -n ${namespace} ${podName} -- bash -c '
+cd /var/www/html &&
+php -r "
+require_once \\"wp-load.php\\";
+echo get_option(\\"home\\");
+"
+'
+`);
+
+console.log("Verified home URL:", verifyUrl.trim());
+      
+            
+            console.log('WordPress URLs updated successfully!');
+          }
+        }
+      } catch (error) {
+        console.error('Could not update WordPress URLs:', error.message);
+      }
+
+      await job.updateProgress(95);
+
       const finalStatus = isReady ? 'ready' : 'deploying';
       
-      console.log(`📝 Updating database status to: ${finalStatus}`);
+      const loginUrl = `${actualUrl}/wp-login.php`;
       
       await Store.update(
         {
+          url: loginUrl,  
           status: finalStatus,
-          error_message: isReady ? null : 'Pod taking longer than expected to be ready'
+          error_message: isReady ? null : 'Pod taking longer than expected'
         },
         { where: { id: storeDbId } }
       );
 
       await job.updateProgress(100);
 
-      console.log(`✅ Store provisioned successfully: ${storeName}`);
-      console.log(`   URL: ${helmResult.url}`);
-      console.log(`   Admin Email: ${adminEmail}`);
-      console.log(`   Admin Password: ${finalAdminPassword}`);
+      console.log(`Store provisioned successfully: ${storeName}`);
+      console.log(`   URL: ${loginUrl}`);
 
-      // Return result
       return {
         success: true,
         storeId: storeId,
         storeName: storeName,
-        url: helmResult.url,
+        url: loginUrl,
         status: finalStatus,
         isReady: isReady
       };
 
     } catch (error) {
-      console.error(`❌ Error provisioning store ${storeName}:`, error);
-      console.error('Error details:', error.message);
+      console.error(`Error provisioning store ${storeName}:`, error);
 
-      // Update store record with failed status
       await Store.update(
         {
           status: 'failed',
@@ -134,17 +190,16 @@ const storeProvisioningWorker = new Worker(
   }
 );
 
-// Event handlers
 storeProvisioningWorker.on('completed', (job, result) => {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`✅ Job ${job.id} completed successfully`);
+  console.log(`Job ${job.id} completed successfully`);
   console.log(`   Store URL: ${result.url}`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 });
 
 storeProvisioningWorker.on('failed', (job, error) => {
   console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.error(`❌ Job ${job.id} failed:`, error.message);
+  console.error(`Job ${job.id} failed:`, error.message);
   console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 });
 
@@ -152,22 +207,21 @@ storeProvisioningWorker.on('progress', (job, progress) => {
   console.log(`   Job ${job.id} progress: ${progress}%`);
 });
 
-// Graceful shutdown
 process.on('SIGTERM', async () => {
-  console.log('⚠️ SIGTERM received, closing worker...');
+  console.log('SIGTERM received, closing worker...');
   await storeProvisioningWorker.close();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  console.log('⚠️ SIGINT received, closing worker...');
+  console.log('SIGINT received, closing worker...');
   await storeProvisioningWorker.close();
   process.exit(0);
 });
 
-console.log('👷 Store provisioning worker started');
-console.log('   Concurrency: 3');
-console.log('   Rate limit: 5 jobs per minute');
-console.log('   Waiting for jobs...');
+console.log('Store provisioning worker started');
+console.log('Concurrency: 3');
+console.log('Rate limit: 5 jobs per minute');
+console.log('Waiting for jobs...');
 
 module.exports = storeProvisioningWorker;

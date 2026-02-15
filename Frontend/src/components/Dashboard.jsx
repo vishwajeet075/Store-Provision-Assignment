@@ -4,7 +4,7 @@ import StoreCard from './StoreCard';
 import CreateStoreModal from './CreateStoreModal';
 import './Dashboard.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://app.local';
 
 const Dashboard = () => {
   const [stores, setStores] = useState([]);
@@ -16,7 +16,6 @@ const Dashboard = () => {
   useEffect(() => {
     fetchStores();
     return () => {
-      // Cleanup polling on unmount
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
       }
@@ -24,7 +23,6 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    // Start polling if there are provisioning stores
     const hasProvisioningStores = stores.some(store => 
       ['provisioning', 'deploying'].includes(store.status?.toLowerCase())
     );
@@ -39,12 +37,12 @@ const Dashboard = () => {
   }, [stores]);
 
   const startPolling = () => {
-    if (pollingIntervalRef.current) return; // Already polling
+    if (pollingIntervalRef.current) return; 
     
     console.log('🔄 Started polling for store status updates');
     pollingIntervalRef.current = setInterval(() => {
-      fetchStores(true); // Silent fetch (don't show loading)
-    }, 5000); // Poll every 5 seconds
+      fetchStores(true); 
+    }, 5000);
   };
 
   const stopPolling = () => {
@@ -86,7 +84,6 @@ const Dashboard = () => {
   const handleStoreCreated = (newStore) => {
     setStores([newStore, ...stores]);
     setShowCreateModal(false);
-    // Start polling immediately for the new provisioning store
     startPolling();
   };
 

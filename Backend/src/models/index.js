@@ -7,16 +7,21 @@ const models = {
   Store
 };
 
-// Sync database (creates tables if they don't exist)
 const syncDatabase = async (force = false) => {
   try {
-    await sequelize.sync({ force, alter: !force });
-    console.log('✅ Database synchronized successfully.');
+    if (force) {
+      await sequelize.sync({ force: true });
+      console.log('Database dropped and recreated.');
+    } else {
+      await sequelize.sync();
+      console.log('Database synchronized safely.');
+    }
   } catch (error) {
-    console.error('❌ Error synchronizing database:', error);
+    console.error('Error synchronizing database:', error);
     throw error;
   }
 };
+
 
 module.exports = {
   sequelize,

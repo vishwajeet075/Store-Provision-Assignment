@@ -1,13 +1,4 @@
 apiVersion: v1
-kind: Secret
-metadata:
-  name: mysql-secret
-  namespace: woocommerce-stores
-type: Opaque
-stringData:
-  mysql-root-password: "password"
----
-apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mysql-pvc

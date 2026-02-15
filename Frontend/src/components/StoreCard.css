@@ -238,7 +238,6 @@
   }
 }
 
-/* Delete button */
 .delete-store-button {
   background: none;
   border: none;
@@ -262,7 +261,7 @@
   cursor: not-allowed;
 }
 
-/* Delete confirmation modal */
+
 .delete-confirm-overlay {
   position: fixed;
   top: 0;
@@ -350,7 +349,6 @@
   cursor: not-allowed;
 }
 
-/* Provisioning state */
 .provisioning-container {
   display: flex;
   flex-direction: column;
@@ -367,7 +365,6 @@
   margin: 0;
 }
 
-/* Loading spinner */
 .loading-spinner {
   width: 16px;
   height: 16px;
@@ -381,7 +378,6 @@
   to { transform: rotate(360deg); }
 }
 
-/* Error message styling */
 .error-message {
   background: rgba(239, 68, 68, 0.1);
   border-radius: 8px;
@@ -397,7 +393,6 @@
   font-size: 13px;
 }
 
-/* Update store card header to flex */
 .store-card-header {
   display: flex;
   justify-content: space-between;
@@ -410,7 +405,6 @@
   min-width: 0;
 }
 
-/* Disabled visit button */
 .visit-store-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;

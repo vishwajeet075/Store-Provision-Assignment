@@ -31,12 +31,12 @@ spec:
             - sh
             - -c
             - |
-              echo "⏳ Waiting for MySQL to be ready..."
+              echo "Waiting for MySQL to be ready..."
               until nc -z mysql-service.woocommerce-stores.svc.cluster.local 3306; do
                 echo "MySQL not ready yet, waiting..."
                 sleep 5
               done
-              echo "✅ MySQL is ready!"
+              echo "MySQL is ready!"
 
       containers:
         - name: wordpress
@@ -58,8 +58,8 @@ spec:
             - name: WORDPRESS_DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: mysql-secret
-                  key: mysql-root-password
+                  name: {{ .Values.wordpress.env.WORDPRESS_DB_PASSWORD_SECRET.name }}
+                  key: {{ .Values.wordpress.env.WORDPRESS_DB_PASSWORD_SECRET.key }}
             - name: WORDPRESS_TABLE_PREFIX
               value: {{ .Values.wordpress.env.WORDPRESS_TABLE_PREFIX | quote }}
             - name: WORDPRESS_DEBUG

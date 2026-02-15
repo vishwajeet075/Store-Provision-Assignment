@@ -13,11 +13,11 @@ const connection = new Redis({
 
 // Test Redis connection
 connection.on('connect', () => {
-  console.log('✅ Redis connected successfully');
+  console.log('Redis connected successfully');
 });
 
 connection.on('error', (err) => {
-  console.error('❌ Redis connection error:', err);
+  console.error('Redis connection error:', err);
 });
 
 // Create queue for store provisioning
@@ -30,11 +30,11 @@ const storeProvisioningQueue = new Queue('store-provisioning', {
       delay: 5000
     },
     removeOnComplete: {
-      age: 24 * 3600, // Keep completed jobs for 24 hours
+      age: 24 * 3600, 
       count: 1000
     },
     removeOnFail: {
-      age: 7 * 24 * 3600 // Keep failed jobs for 7 days
+      age: 7 * 24 * 3600 
     }
   }
 });
@@ -55,10 +55,10 @@ const addStoreProvisioningJob = async (storeData) => {
       }
     );
     
-    console.log(`✅ Job added to queue: ${job.id} for store: ${storeData.storeName}`);
+    console.log(`Job added to queue: ${job.id} for store: ${storeData.storeName}`);
     return job;
   } catch (error) {
-    console.error('❌ Error adding job to queue:', error);
+    console.error('Error adding job to queue:', error);
     throw error;
   }
 };
@@ -85,7 +85,7 @@ const getJobStatus = async (jobId) => {
       failedReason: job.failedReason
     };
   } catch (error) {
-    console.error('❌ Error getting job status:', error);
+    console.error('Error getting job status:', error);
     throw error;
   }
 };
@@ -113,7 +113,7 @@ const getQueueMetrics = async () => {
       total: waiting + active + completed + failed + delayed
     };
   } catch (error) {
-    console.error('❌ Error getting queue metrics:', error);
+    console.error('Error getting queue metrics:', error);
     throw error;
   }
 };

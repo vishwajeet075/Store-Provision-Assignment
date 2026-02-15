@@ -19,10 +19,10 @@ class HelmService {
   async checkHelm() {
     try {
       const { stdout } = await execAsync('helm version --short');
-      console.log('✅ Helm version:', stdout.trim());
+      console.log('Helm version:', stdout.trim());
       return true;
     } catch (error) {
-      console.error('❌ Helm is not installed or not in PATH');
+      console.error('Helm is not installed or not in PATH');
       throw new Error('Helm is not available');
     }
   }
@@ -33,11 +33,11 @@ class HelmService {
   async ensureNamespace() {
     try {
       await execAsync(`kubectl get namespace ${this.namespace}`);
-      console.log(`✅ Namespace ${this.namespace} exists`);
+      console.log(`Namespace ${this.namespace} exists`);
     } catch (error) {
-      console.log(`📦 Creating namespace ${this.namespace}...`);
+      console.log(`Creating namespace ${this.namespace}...`);
       await execAsync(`kubectl create namespace ${this.namespace}`);
-      console.log(`✅ Namespace ${this.namespace} created`);
+      console.log(`Namespace ${this.namespace} created`);
     }
   }
 
@@ -71,13 +71,10 @@ generateTablePrefix(storeId) {
     throw new Error(`Invalid table prefix: ${prefix}`);
   }
   
-  console.log(`✅ Table prefix: ${prefix}`);
+  console.log(`Table prefix: ${prefix}`);
   return prefix;
 }
 
-/**
- * Generate values file for Helm chart
- */
 async generateValuesFile(storeData) {
   const {
     storeName,
@@ -86,7 +83,8 @@ async generateValuesFile(storeData) {
     adminPassword
   } = storeData;
 
-  const releaseName = `store-${storeId}`;
+  const storeIdString = String(storeId);
+  const releaseName = `store-${storeIdString}`;
   
   const sanitizedStoreName = storeName.toLowerCase()
     .replace(/\s+/g, '-')
@@ -94,12 +92,11 @@ async generateValuesFile(storeData) {
   
   const url = `${sanitizedStoreName}.${this.baseDomain}`;
   
-  // Generate clean table prefix from storeId only
-  const tablePrefix = this.generateTablePrefix(storeId);
+  const tablePrefix = this.generateTablePrefix(storeIdString);
 
   const values = {
     storeName: storeName,
-    storeId: storeId.toString(),
+    storeId: storeIdString,  
     
     wordpress: {
       image: {
@@ -111,28 +108,30 @@ async generateValuesFile(storeData) {
         WORDPRESS_DB_HOST: 'mysql-service.woocommerce-stores.svc.cluster.local:3306',
         WORDPRESS_DB_NAME: 'woocommerce',
         WORDPRESS_DB_USER: 'root',
-        WORDPRESS_DB_PASSWORD: 'password',
-        WORDPRESS_TABLE_PREFIX: tablePrefix,  // Clean prefix
+        WORDPRESS_DB_PASSWORD_SECRET: {
+    name: 'mysql-secret',
+    key: 'mysql-root-password'
+  },
+        WORDPRESS_TABLE_PREFIX: tablePrefix,
         WORDPRESS_DEBUG: 'false'
       },
       resources: {
         requests: {
-          memory: '256Mi',  // Reduced
+          memory: '256Mi',
           cpu: '100m'
         },
         limits: {
-          memory: '512Mi',  // Reduced
+          memory: '512Mi',
           cpu: '300m'
         }
       }
     },
 
-service: {
-  type: 'NodePort',  // Changed from ClusterIP
-  port: 80,
-  targetPort: 80,
-  nodePort: null  // Let Kubernetes assign automatically
-},
+    service: {
+      type: 'NodePort',
+      port: 80,
+      targetPort: 80
+    },
 
     ingress: {
       enabled: false,
@@ -150,7 +149,7 @@ service: {
     },
 
     persistence: {
-      enabled: true,  // DISABLE for now to test
+      enabled: true,
       storageClass: '',
       size: '10Gi',
       accessMode: 'ReadWriteOnce',
@@ -215,49 +214,49 @@ service: {
   const yamlContent = this.convertToYaml(values);
   await fs.writeFile(valuesPath, yamlContent, 'utf8');
   
-  console.log(`📝 Values file: ${valuesPath}`);
-  console.log(`🏷️ Table prefix: ${tablePrefix}`);
+  console.log(`Values file: ${valuesPath}`);
+  console.log(`Table prefix: ${tablePrefix}`);
+  console.log(`Store ID (string): ${storeIdString}`);
   
   return { valuesPath, releaseName, url };
 }
 
-  /**
-   * Simple YAML converter (for basic structures)
-   */
-  convertToYaml(obj, indent = 0) {
-    let yaml = '';
-    const spaces = '  '.repeat(indent);
+convertToYaml(obj, indent = 0) {
+  let yaml = '';
+  const spaces = '  '.repeat(indent);
 
-    for (const [key, value] of Object.entries(obj)) {
-      if (value === null || value === undefined) {
-        yaml += `${spaces}${key}: null\n`;
-      } else if (typeof value === 'object' && !Array.isArray(value)) {
-        yaml += `${spaces}${key}:\n${this.convertToYaml(value, indent + 1)}`;
-      } else if (Array.isArray(value)) {
-        yaml += `${spaces}${key}:\n`;
-        value.forEach(item => {
-          if (typeof item === 'object') {
-            yaml += `${spaces}- \n${this.convertToYaml(item, indent + 2)}`;
-          } else {
-            yaml += `${spaces}- ${item}\n`;
-          }
-        });
-      } else if (typeof value === 'string') {
-        // Don't quote numbers that look like strings
-        if (!isNaN(value) && value.trim() !== '') {
-          yaml += `${spaces}${key}: ${value}\n`;
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === null || value === undefined) {
+      yaml += `${spaces}${key}: null\n`;
+    } else if (typeof value === 'object' && !Array.isArray(value)) {
+      yaml += `${spaces}${key}:\n${this.convertToYaml(value, indent + 1)}`;
+    } else if (Array.isArray(value)) {
+      yaml += `${spaces}${key}:\n`;
+      value.forEach(item => {
+        if (typeof item === 'object') {
+          yaml += `${spaces}- \n${this.convertToYaml(item, indent + 2)}`;
         } else {
-          yaml += `${spaces}${key}: "${value}"\n`;
+          yaml += `${spaces}- ${item}\n`;
         }
-      } else if (typeof value === 'boolean') {
+      });
+    } else if (typeof value === 'string') {
+      if (key === 'storeId' || key === 'adminPassword') {
+        yaml += `${spaces}${key}: "${value}"\n`;
+      }
+      else if (!isNaN(value) && value.trim() !== '') {
         yaml += `${spaces}${key}: ${value}\n`;
       } else {
-        yaml += `${spaces}${key}: ${value}\n`;
+        yaml += `${spaces}${key}: "${value}"\n`;
       }
+    } else if (typeof value === 'boolean') {
+      yaml += `${spaces}${key}: ${value}\n`;
+    } else {
+      yaml += `${spaces}${key}: ${value}\n`;
     }
-
-    return yaml;
   }
+
+  return yaml;
+}
 
 async installRelease(storeData) {
   try {
@@ -266,44 +265,43 @@ async installRelease(storeData) {
 
     const { valuesPath, releaseName, url } = await this.generateValuesFile(storeData);
 
-    console.log(`📦 Installing Helm release: ${releaseName}`);
+    console.log(`Installing Helm release: ${releaseName}`);
     
-    const command = `helm install ${releaseName} ${this.chartPath} \
+    const command = `helm upgrade --install ${releaseName} ${this.chartPath} \
       --namespace ${this.namespace} \
       --values ${valuesPath} \
       --timeout 5m`;
 
     const { stdout, stderr } = await execAsync(command);
     
-    console.log(`✅ Helm release installed: ${releaseName}`);
+    console.log(`Helm release installed: ${releaseName}`);
 
     // Cleanup values file
     await fs.unlink(valuesPath);
 
-    // Wait for pod to start
-    console.log('⏳ Waiting for pod to start...');
+    // Wait for service to be created
+    console.log('Waiting for service to be created...');
     await new Promise(resolve => setTimeout(resolve, 10000));
 
     // Get NodePort
     let finalUrl = `https://${url}`; // Default
     
     try {
-      const svcCommand = `kubectl get svc -n ${this.namespace} ${releaseName}-wordpress -o jsonpath='{.spec.ports[0].nodePort}'`;
+      const svcCommand = `kubectl get svc -n ${this.namespace} ${releaseName} -o jsonpath='{.spec.ports[0].nodePort}'`;
       const { stdout: nodePort } = await execAsync(svcCommand);
       
-      if (nodePort) {
-        // Use NodePort URL (requires knowing your node IP)
+      if (nodePort && nodePort.trim()) {
         const nodeIP = process.env.NODE_IP || 'localhost';
-        finalUrl = `http://${nodeIP}:${nodePort}`;
+        finalUrl = `http://${nodeIP}:${nodePort.trim()}`;
         console.log(`🌐 NodePort URL: ${finalUrl}`);
       }
     } catch (e) {
-      console.warn('⚠️ Could not get NodePort');
+      console.warn('Could not get NodePort:', e.message);
     }
 
     return {
       success: true,
-      releaseName,
+      releaseName: releaseName,
       namespace: this.namespace,
       url: finalUrl,
       storeId: storeData.storeId,
@@ -311,7 +309,7 @@ async installRelease(storeData) {
       status: 'deploying'
     };
   } catch (error) {
-    console.error('❌ Error installing Helm release:', error);
+    console.error('Error installing Helm release:', error);
     throw error;
   }
 }
@@ -324,7 +322,7 @@ async installRelease(storeData) {
       const releaseName = `store-${storeId}`;
       const { valuesPath } = await this.generateValuesFile(storeData);
 
-      console.log(`🔄 Upgrading Helm release: ${releaseName}`);
+      console.log(`Upgrading Helm release: ${releaseName}`);
       
       const command = `helm upgrade ${releaseName} ${this.chartPath} \
         --namespace ${this.namespace} \
@@ -334,7 +332,7 @@ async installRelease(storeData) {
 
       const { stdout, stderr } = await execAsync(command);
       
-      console.log(`✅ Helm release upgraded: ${releaseName}`);
+      console.log(`Helm release upgraded: ${releaseName}`);
       console.log(stdout);
 
       // Cleanup values file
@@ -342,7 +340,7 @@ async installRelease(storeData) {
 
       return { success: true, releaseName };
     } catch (error) {
-      console.error('❌ Error upgrading Helm release:', error);
+      console.error('Error upgrading Helm release:', error);
       throw error;
     }
   }
@@ -352,17 +350,17 @@ async installRelease(storeData) {
    */
   async uninstallRelease(releaseName) {
     try {
-      console.log(`🗑️ Uninstalling Helm release: ${releaseName}`);
+      console.log(`Uninstalling Helm release: ${releaseName}`);
       
       const command = `helm uninstall ${releaseName} --namespace ${this.namespace}`;
       const { stdout } = await execAsync(command);
       
-      console.log(`✅ Helm release uninstalled: ${releaseName}`);
+      console.log(`Helm release uninstalled: ${releaseName}`);
       console.log(stdout);
 
       return { success: true };
     } catch (error) {
-      console.error('❌ Error uninstalling Helm release:', error);
+      console.error('Error uninstalling Helm release:', error);
       throw error;
     }
   }
@@ -376,7 +374,7 @@ async installRelease(storeData) {
       const { stdout } = await execAsync(command);
       return JSON.parse(stdout);
     } catch (error) {
-      console.error('❌ Error getting release status:', error);
+      console.error('Error getting release status:', error);
       return null;
     }
   }
@@ -390,7 +388,7 @@ async installRelease(storeData) {
       const { stdout } = await execAsync(command);
       return JSON.parse(stdout);
     } catch (error) {
-      console.error('❌ Error listing releases:', error);
+      console.error('Error listing releases:', error);
       return [];
     }
   }
@@ -405,7 +403,7 @@ async installRelease(storeData) {
       const { stdout } = await execAsync(command);
       return stdout;
     } catch (error) {
-      console.error('❌ Error getting store logs:', error);
+      console.error('Error getting store logs:', error);
       return null;
     }
   }
@@ -433,7 +431,7 @@ async installRelease(storeData) {
         return status && ready;
       });
     } catch (error) {
-      console.error('❌ Error checking store readiness:', error);
+      console.error('Error checking store readiness:', error);
       return false;
     }
   }

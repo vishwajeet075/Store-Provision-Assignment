@@ -3,7 +3,6 @@ const User = require('../models/user.model');
 
 const authMiddleware = async (req, res, next) => {
   try {
-    // Get token from header
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -12,8 +11,8 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    // Extract token
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    const token = authHeader.substring(7); 
 
     if (!token) {
       return res.status(401).json({ 
@@ -21,13 +20,11 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    // Verify token
     const decoded = jwt.verify(
       token, 
       process.env.JWT_SECRET || 'your-secret-key'
     );
 
-    // Check if user exists and is active
     const user = await User.findByPk(decoded.id);
 
     if (!user) {
@@ -42,7 +39,6 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    // Attach user to request
     req.user = {
       id: user.id,
       username: user.username,
@@ -53,7 +49,7 @@ const authMiddleware = async (req, res, next) => {
     next();
 
   } catch (error) {
-    console.error('❌ Auth middleware error:', error);
+    console.error('Auth middleware error:', error);
 
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({ 
@@ -74,9 +70,7 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
-/**
- * Optional middleware - allows requests with or without auth
- */
+
 const optionalAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -101,14 +95,13 @@ const optionalAuth = async (req, res, next) => {
           };
         }
       } catch (error) {
-        // Token invalid or expired, but continue anyway
-        console.warn('⚠️ Optional auth: Invalid token, continuing without auth');
+        console.warn('ptional auth: Invalid token, continuing without auth');
       }
     }
 
     next();
   } catch (error) {
-    console.error('❌ Optional auth middleware error:', error);
+    console.error('Optional auth middleware error:', error);
     next();
   }
 };
