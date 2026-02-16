@@ -98,32 +98,23 @@ print_success "Redis deployed"
 echo ""
 print_status "Step 6: Deploying MySQL Backend..."
 kubectl apply -f ${K8S_DIR}/mysql-backend-deployment.yaml
-wait_for_pods "app=mysql" $NAMESPACE_PLATFORM 120
 print_success "MySQL Backend deployed"
 
 echo ""
 print_status "Step 7: Deploying MySQL Stores..."
 kubectl apply -f ${K8S_DIR}/store-mysql-deployment.yaml
-wait_for_pods "app=mysql" $NAMESPACE_STORES 120
 print_success "MySQL Stores deployed"
 
 echo ""
 print_status "Step 8: Deploying Backend API..."
 kubectl apply -f ${K8S_DIR}/backend-deployment.yaml
-wait_for_pods "app=backend-api" $NAMESPACE_PLATFORM 180
 print_success "Backend API deployed"
 
 echo ""
 print_status "Step 9: Deploying Workers..."
 kubectl apply -f ${K8S_DIR}/queue-worker-deployment.yaml
-wait_for_pods "app=store-provisioning-worker" $NAMESPACE_PLATFORM 120
 print_success "Workers deployed"
 
-echo ""
-print_status "Step 10: Deploying Frontend..."
-kubectl apply -f ${K8S_DIR}/Frontend-deployment.yaml
-wait_for_pods "app=frontend" $NAMESPACE_PLATFORM 120
-print_success "Frontend deployed"
 
 echo ""
 echo "========================================="

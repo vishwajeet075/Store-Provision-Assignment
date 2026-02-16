@@ -4,7 +4,7 @@ metadata:
   name: frontend-config
   namespace: woocommerce-platform
 data:
-  API_BASE_URL: "http://app.local"
+  API_BASE_URL: "http://localhost:5000"
 
 ---
 apiVersion: apps/v1

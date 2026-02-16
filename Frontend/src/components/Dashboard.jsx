@@ -4,7 +4,7 @@ import StoreCard from './StoreCard';
 import CreateStoreModal from './CreateStoreModal';
 import './Dashboard.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://app.local';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 const Dashboard = () => {
   const [stores, setStores] = useState([]);

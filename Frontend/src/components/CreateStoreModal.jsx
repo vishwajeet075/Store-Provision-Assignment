@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './CreateStoreModal.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://app.local';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 const CreateStoreModal = ({ onClose, onStoreCreated }) => {
   const [formData, setFormData] = useState({
