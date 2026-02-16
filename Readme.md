@@ -223,19 +223,14 @@ npm run dev
 ```
   VITE v5.x.x  ready in xxx ms
 
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: use --host to expose
+  ➜  Local:   http://localhost:3000/
 ```
 
 ### Step 8: Access the Application
 
 Open your browser and navigate to:
 
-**Frontend:** http://localhost:5173
-
-**Default Login Credentials:**
-- Email: `admin@example.com`
-- Password: `admin123`
+**Frontend:** http://localhost:3000
 
 ---
 
